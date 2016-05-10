@@ -1,0 +1,85 @@
+TRAINING SET CONFIG FILE README
+
+This file contains explanations of the syntax along with examples
+A sample config file is given at the end after the explanation of the syntax.
+
+To specify the target hmm (the hmm that matches the sequences you are interested in collecting) use the syntax
+TARGET: <file path>       (no triangular brackets needed, just put the file path after the colon and at least one space)
+EXAMPLE:
+TARGET: usr/local/hmm_dir/hmm_one
+
+
+To specify the score a target sequence must exceed, use the syntax
+TARGET SCORE: <some number>   (again, no triangular brackets needed, just put the number after at least one space)
+EXAMPLE:
+TARGET SCORE: 250
+
+A target hmm and target score are required in every config file. After that, the user can specify any number of attributes that are used to sort the target sequences into
+either the YES category or the NO category. Any sequences that fail to meet all of the YES attributes or all of the NO attributes will be discarded as being indeterminate.
+
+Attributes take the following form:
+
+YES: ([distance]file path>score,[distance]file path<score...)
+
+This may seem confusing, but they are simple to write.
+
+Each line begins with either YES: or NO:
+
+A line beginning with YES: states that the condition described in that line must be true of a genome in order to include the target sequence from that genome into the 
+YES set.
+
+A line beginning with NO: states that the condition described in that line must be true of a genome in order to include the target sequence from that genome into the
+NO set.
+
+If there are multiple YES lines, they ALL must be true, or the target sequence will be considered unsortable.
+
+If there are multiple NO lines, they ALL must be true, or the target sequence will be considered unsortable.
+
+An attribute can require a score to be below a certain score - in that case use a < rather than a >  
+EXAMPLE:
+YES: fake/hmm/file/path<250
+
+An attribute can also require that the attribute hmm match region be within a certain distance of the match site of the target hmm. This is expressed by beginning the attribute with a number in square brackets
+EXAMPLE:
+YES: [400]fake/hmm/file/path>150
+
+
+WARNING: Do not specify a distance if you are also specifying a condition that requires a score to be BELOW a threshold, because that doesn't make any sense
+
+
+
+Attributes that are on separate lines are considered connected by a logical AND (they all must be true).
+Attributes that are listed on the same line, grouped within parenthesis, and separated by commas (no spaces) are considered connected by a logical OR (only one must be true)
+
+EXAMPLE:
+
+NO: ([300]hmm/one>200,hmm/one>400,[500]hmm/two>200)
+That line specifies that AT LEAST ONE of the following must be true:
+*The hmm located at hmm/one must score greater than 200 and be within 300 nucleotides of the match region for the target hmm
+*The hmm located at hmm/one (the same hmm from the previous condition) must score greater than 400  (basically, if it scores really well, it doesn't have to be close)
+*The hmm located at hmm/two must score greater than 200 and be within 500 nucleotides of the match region for the target hmm
+
+
+You can combine AND and ORs to specify any conditions you want
+EXAMPLE:
+YES: [300]hmm/A>200
+YES: (hmm/B>150,hmm/C>130)
+YES: hmm/D<50
+
+This would mean that hmm/A must score greater than 200 within a distance of 300, that either hmm/B scores greater than 150 OR hmm/C scores greater than 130, and that hmm/D must score less than 50.
+
+
+With this syntax, you can make any sort of complex condition.
+
+EXAMPLE:
+TARGET: /home/davidh/SIMBAL/PF01694.HMM
+TARGET SCORE: 21.9
+NO: /home/davidh/SIMBAL/TIGRFAM/TIGR03501.HMM<12.5
+NO: /home/davidh/SIMBAL/TIGRFAM/TIGR03867.HMM<16
+NO: /home/davidh/SIMBAL/TIGRFAM/TIGR04212.HMM<210
+NO: /home/davidh/SIMBAL/TIGRFAM/TIGR04179.HMM<40
+YES: (/home/davidh/SIMBAL/TIGRFAM/TIGR03501.HMM>16,/home/davidh/SIMBAL/TIGRFAM/TIGR03867.HMM>20,/home/davidh/SIMBAL/TIGRFAM/TIGR04212.HMM>295,/home/davidh/SIMBAL/TIGRFAM/TIGR04179.HMM>150)
+
+
+
+

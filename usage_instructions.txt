@@ -1,0 +1,121 @@
+These are usage instructions for the SIMBAL software suite. In a typical workflow, the various components will be run in the order they are described. Not every component will be needed in every run.
+
+__________________________________________________________________________________________________________________________________________________________________________________________________________________________________
+
+Training Set Builder Usage:
+perl distance_trainer.pl -config <path to config file> (-acc <accession number> OR -list <path to list of accessions> OR -complete)
+plus additional options
+	-keep                             keep downloaded fasta and gff files
+	-debug                            produces various log files and additional runtime output
+	-location <file path> OR -local   looks for and downloads to the given location if -location or locally if -local   
+									  if neither flag is given, it uses a default location (at JCVI this is /usr/local/projdata/9672/projects/DB/ProkCompleteRefSeq)
+	-help                             display a help message and then quit
+
+Two flags are always required, the -config flag, and a flag corresponding to the genomes to be searched (-acc OR -list OR -complete)
+
+	
+If the -acc flag is given, the training set builder will check the default directory (or a location given by -location, or . if -local) for a file called "acc.fasta" where acc is the string given after the -acc flag
+If such a file exists, that file is processed. If no such file is found, it will be interpreted as a RefSeq accession and the software will attempt to download it
+
+The default location is set by the $refseq_location global variable. If you plan to do multiple runs of the software, or if multiple people intend to use the software, it may be useful to specify a default location other than the given one.
+Of course, this location may be overridden at runtime by either the -location <file path> or -local flag.
+
+If the -list flag is given, the training set builder will look for a file at the file path given after the -list flag. If such a file is found, it will iteratively treat each line of that file as if the program were run with the -acc flag
+with the text of that line as an arguement. (Meaning this file should be a list of accessions or file names)
+
+If the -complete flag is given, the training set builder will run on the current set of all complete RefSeq genomes. This flag is not compatible with the -list and -acc flags.
+
+The output of the training set builder is to various subdirectories created within the directory that you launch the program from. At this time, there is no flag to redirect the output.
+
+Example usage:
+perl ~/SIMBAL/distance_trainer.pl -config ~/SIMBAL/improved_rhomb_config -complete -keep -debug
+
+(Use the configuration file ~/SIMBAL/improved_rhomb_config to sort all completed refseq genomes, keeping any fasta files that needed to be downloaded, and producing verbose output and log files)
+(Since neither -location nor -local were used, the software looks for genomes in /usr/local/projdata/99999/IFX/CommonDB/ProkCompleteRefSeq since that is the defualt location used by the JCVI copy of the software)
+
+More details can be found in the file CONFIG.README
+__________________________________________________________________________________________________________________________________________________________________________________________________________________________________
+Domain Extractor Usage:
+perl domain.pl -seqs <path to FASTA file> -hmm <path to HMM> -domain <domain score cutoff> -protein <protein score cutoff> 
+plus additional options	
+	-tmp <file path>                  specify a file to use to store HMM results (if unspecified, program uses ./extraction.tmp)
+
+All flags other than -tmp are required.
+
+This software searches the file given by -seqs with the HMM given by -hmm, and reports all regions that meet the cutoff given by -domain that come from proteins that meet the cutoff given by -protein
+
+If multiple regions meet the domain cutoff, then multiple sequences may be extracted. In all cases, the original sequence header line is preserved, with additional information about the coordinates added to the header line. 
+This coordinate information is relative, not absolute coordinates, and counts from the beginning of the source sequence.
+
+In a typical SIMBAL workflow, the -protein cutoff is likely redundant, since these sequences would already have been scored against the protein cutoff during training set building. In these cases, the user may specify an 
+arbitrarily low cutoff, or use the same value for -domain and -protein, with no ill effect.
+
+When the sequence source is something other than the Training Set Builder, this cutoff may be useful. 
+
+__________________________________________________________________________________________________________________________________________________________________________________________________________________________________
+USEARCH - for non-redundification of the data set
+usearch -cluster_fast _YES/yes.fasta -id 0.8 -centroids yes.clust.fasta
+	-cluster_fast requires the path to the input file
+	-centroids requires the path for the desired output file
+	-id specifies the identity threshold for non-redundification
+	
+You will likely need to run this software twice - once for the "yes" set and once for the "no" set. The output may be given any name - just be sure to use the non-redundant fasta files as SIMBAL input.
+
+USEARCH is 3rd party software that we may not re-distribute. If your organization doesn't already have a copy, get it here:
+http://www.drive5.com/usearch/download.html
+__________________________________________________________________________________________________________________________________________________________________________________________________________________________________
+SIMBAL Usage:
+[adapted from the legacy SIMBAL usage instructions]
+REQUIRED
+ -t [  ]  T-RUE:  FILENAME for fasta_file of TRUE  portion of training set
+ -f [  ]  F-ALSE: for fasta_file of FALSE portion of training set
+ -s [  ]  s-ingle sequence file, fasta format
+
+OPTIONS
+ -h               print this message and exit
+ -j [  ]  j-ump : step-size for progressively changing window       DEFAULT = 10
+ -m [  ]  m-inimum size for sliding window                          DEFAULT = 10
+ -M [  ]  M-AXIMUM size for sliding window                          DEFAULT = 10
+ -w [  ]  w-alk : the step size for sliding the window along
+ -n [  ]  n-ame for project
+ -x [  ]  scratch (X) directory path
+ -p [  ]  probability : option to force use of probability p, rather than deriving from training set
+ -z       zap :  don't delete the BLAST file after using it (default behavior is to delete)
+ -E [  ]  E-value figure for blastp - default of 10.0 invites noise contamination of results.
+ 
+ For a full resolution picture, the most common invocation is 
+ perl SIMBAL.pl -t <file path> -f <file path> -s <file path> -j 1 -w 1 -m 7 -M 1000 -n <give your project a name>
+ 
+ Program runtime scales with the inverse of arguments to -j and -w and query sequence length, so -j 3 -w 4 would run 12x faster than -j 1 -w 1
+ 
+ If you want to speed up SIMBAL by parallelization, the simplest way would be to launch a bunch of runs that use -m X -M X -n <project name>_X 
+ (for all values of X from 7 to query length), then combine all of the report files into one file. Each data point from SIMBAL can be computed
+ independently of all other data points, so it can be broken up into a bunch of little pieces and farmed out separately. Going one length at a
+ time is just the simplest way to break up and re-combine the data, and can be accomplished with a simple PERL script. This is probably only a
+ thing worth doing if you expect to be doing a large number of high resolution SIMBAL runs. Personally, I've never found this approach to be a 
+ necessity. - DRH
+ __________________________________________________________________________________________________________________________________________________________________________________________________________________________________
+ Heatmap Usage:
+ R-studio is recommended, but any R distribution can be used. This software requires the ggplot2 graphical display package, which can easily be obtained from within R using install.packages(ggplot2)
+ 
+ To generate a heatmap, source the heatmap_script file, either using the GUI (if you are using R studio) or with the command:
+ source('~/heatmap_script')                                                       # adjust the path to the heatmap script if necessary
+ triangular_heatmap("~/SIMBAL_REPORT_FILE", title="your_title_here")              # replace ~/SIMBAL_REPORT_FILE with the path to the SIMBAL output file you want to display, and replace your_title_here with your desired title
+ __________________________________________________________________________________________________________________________________________________________________________________________________________________________________
+ Plume Finder Usage:
+ perl plume_finder.pl -input <path to SIMBAL report file> -output <desired name of output report file>
+ plus additional options
+	-debug 					verbose output
+	
+ The default inheritence value used is 93%. This may be adjusted by editing the $h variable at the top of the file. This parameter is not given as a command line option in order to discourage casual adjustment of this parameter.
+ Values lower than 93% being to seriously undercut the value of using this smoothing algorithm, as vanishingly small percentages of scores get propagated more than a single row - in fact, 93% is probably one of the smaller 
+ values that is useful - any value will show some smoothing, but plume detection is only meaningful at higher values. Higher values will possible work better than 93% but in many of those cases, using single-residue prediction
+ might be a better approach. This software is to assist in visualization of the data. For computational purposes, the raw SIMBAL data and the single-residue prediction are recommended. Single-residue prediction based on the
+ smoothed data may also be useful, but this combination should be considered experimental at this time.
+ __________________________________________________________________________________________________________________________________________________________________________________________________________________________________
+ Single Residue Usage:
+ perl single_residue.pl -query <path to FASTA file> -data <path to SIMBAL report file (rescored or raw) -length <length to use>
+ 
+ This software is used for extrapolating SIMBAL scores down to a single residue - each residue of the query (which must be the same as the query used to generate the SIMBAL report file) will be given a score that is the average 
+ of every sequence of the given length that contains that residue. Can be useful to aid the examination of crystal structures based on SIMBAL results.
+ 

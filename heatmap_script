@@ -1,0 +1,32 @@
+triangular_heatmap <- function( dataFile, title=NULL) {
+  SIMBAL_OUTPUT <- read.delim(dataFile, header=FALSE)
+  SIMBAL_OUTPUT$scaled <- (SIMBAL_OUTPUT$V4)/max(SIMBAL_OUTPUT$V4)
+  SIMBAL_OUTPUT$colors <- 0
+  SIMBAL_OUTPUT$group <- (1-SIMBAL_OUTPUT$scaled)/.25
+  SIMBAL_OUTPUT$x_val <- floor(SIMBAL_OUTPUT$group)
+  SIMBAL_OUTPUT$y_val <- floor(255*(SIMBAL_OUTPUT$group-SIMBAL_OUTPUT$x_val))
+  SIMBAL_OUTPUT$colors[SIMBAL_OUTPUT$x_val == 0] <- rgb(255, SIMBAL_OUTPUT$y_val[SIMBAL_OUTPUT$x_val == 0], 0, maxColorValue = 255)
+  SIMBAL_OUTPUT$colors[SIMBAL_OUTPUT$x_val == 1] <- rgb(255-SIMBAL_OUTPUT$y_val[SIMBAL_OUTPUT$x_val == 1], 255, 0, maxColorValue = 255)
+  SIMBAL_OUTPUT$colors[SIMBAL_OUTPUT$x_val == 2] <- rgb(0, 255, SIMBAL_OUTPUT$y_val[SIMBAL_OUTPUT$x_val == 2], maxColorValue = 255)
+  SIMBAL_OUTPUT$colors[SIMBAL_OUTPUT$x_val == 3] <- rgb(0, 255-SIMBAL_OUTPUT$y_val[SIMBAL_OUTPUT$x_val == 3], 255, maxColorValue = 255)
+  SIMBAL_OUTPUT$colors[SIMBAL_OUTPUT$x_val == 4] <- rgb(0, 0, 255, maxColorValue = 255)
+  
+  #twentycolors <- c("#0034FF", "#0066FF", "#009AFF", "#00CCFF", "#00FFFF", "#00FFCB", "#00FF99", "#00FF65", "#00FF33", "#00FF00", "#34FF00", "#66FF00", "#9AFF00", "#CCFF00", "#FFFF00", "#FFCB00", "#FF9900", "#FF6500", "#FF3300", "#FF0000")
+  library(ggplot2)
+  #Starting off the ggplot:
+  p <- ggplot(data=SIMBAL_OUTPUT, aes(x = V3, y = V2, col=V4));
+  #Making the shape (shape 18 = rhombas; 16 = circle)
+  p <- p + geom_point(shape=16, size = rel(3.14))
+  p <- p +scale_colour_gradientn(colours=unique(as.character(SIMBAL_OUTPUT$colors[order(SIMBAL_OUTPUT$group, decreasing=T)])))
+  #Adding the labels. If you want a title on the color bar, add to color
+  p <- p +labs(x = "PEPTIDE MIDPOINT", y = "PEPTIDE LENGTH", color="");
+  # Getting the font size for the axis titles and the axis tick mark texts
+  p <- p + theme(axis.title=element_text(size=rel(1.6)), axis.text=element_text(size=rel(1.2)))
+  # Making the legend text and size bigger
+  p <- p + theme(legend.text = element_text(size=rel(1.5))) + guides(color = guide_colorbar(barheight = rel(20)))
+  if (!is.null(title))
+  {
+    p <- p + ggtitle(title)+theme(plot.title = element_text(size=rel(2)));
+  }
+  p
+}
